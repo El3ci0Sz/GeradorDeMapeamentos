@@ -103,6 +103,7 @@ class Mapping_generator:
         
             if valid_neighbors:
                 queue.extend(valid_neighbors)
+                
         return mapped_nodes
     
     
