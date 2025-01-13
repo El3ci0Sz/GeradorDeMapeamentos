@@ -1,6 +1,6 @@
-from cgra import CGRA
+from src.cgra.cgra import CGRA
 from Mapping import Mapping
-from mapping_generator import Mapping_generator
+from src.utils.mapping_generator import Mapping_generator
 import traceback
 import networkx as nx
 import matplotlib.pyplot as plt
