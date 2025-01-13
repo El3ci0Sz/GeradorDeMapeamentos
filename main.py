@@ -1,5 +1,5 @@
 from src.cgra.cgra import CGRA
-from Mapping import Mapping
+from src.utils.Mapping import Mapping
 from src.utils.mapping_generator import Mapping_generator
 import traceback
 import networkx as nx
