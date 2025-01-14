@@ -1,109 +1,195 @@
 import random
-import numpy as np
-from collections import deque
-from cgra import CGRA
+from collections import deque, defaultdict
+from src.cgra.cgra import CGRA
+from src.utils.Mapping import Mapping
 
 class Mapping_generator:
-    '''
-    Classe:
-        Classe principal, onde estão os metodos de mapeamento e os metodos de Manipulação.
+    """
+    Classe responsável por gerar e verificar mapeamentos aleatórios deum DFG para um CGRA.
+    """
 
-    inputs:
+    """
+    input:
     dfg_tam (int)-> tamanho do dfg
-    graph_edges (list[list])-> lista de arestas de um grafo
     II (int)-> Initiation Interval
-    alpha (int)-> Limiar de conexões
-    cgra_dim (tupla)-> Dimensão do cgra 
-    arch_name (str)-> Nome da Arquitetura
-    '''
+    alpha, alpha2 (float)-> Limiar de conexões
+    CGRA (CGRA)-> Arquitetura CGRA
+    """
+    def __init__(self, dfg_tam, II, alpha, alpha2, cgra: CGRA):
 
-    def __init__(self, dfg_tam, graph_edges, II, alpha, cgra : CGRA, cgra_dim, arch_name):
         self.dfg_tam = dfg_tam
-        self.graph_edges = graph_edges
         self.II = II
         self.alpha = alpha
-        self.CGRA = cgra(cgra_dim, arch_name)
+        self.alpha2 = alpha2
+        self.CGRA = cgra
+    """
+    Verifica se o grafo DFG está totalmente conectado.
 
-    '''
-    Metodo:
-        Apartir de um nó, é verificado e armazenado os vizinhos dele.
-    inputs:
-        node (tupla): Posição de um nó.
-        cgra_dim (tuplas): Dimensões do CGRA.
-    outputs:
-        neighbors (lits): Lista com os vizinhos do nó.
-    '''
-    @staticmethod
-    def get_neighbors_mesh(node, cgra_dim):
-            r_node, c_node = node
-            linhas, colunas = cgra_dim
+    Input:
+        mapping (Mapping): Contem os dados do mapeamento.
 
-            neighbors = []
-            if r_node > 0: neighbors.append((r_node - 1, c_node))
-            if r_node < linhas - 1: neighbors.append((r_node + 1, c_node)) 
-            if c_node > 0: neighbors.append((r_node, c_node - 1))  
-            if c_node < colunas - 1: neighbors.append((r_node, c_node + 1))  
-            return neighbors
+    Returns:
+        bool: True se o grafo for conectado, False caso contrário.
+    """
+    def is_connected(self, mapping: Mapping):
+       
+        if not mapping.dfg_edges:
+            return False
 
-    
-    '''
-    Quero sua opnião sobre essas 2 funções, Estava pesquisandosobre como o alpha é utilizado em algoritmos e
-    codigos, e encontrei essa forma, que fez sentido para mim.
-    '''
-    @staticmethod
-    def calculate_distance(pe1, pe2):
-        """
-        Calcula a distância Manhattan entre dois PEs.
-        """
-        return abs(pe1[0] - pe2[0]) + abs(pe1[1] - pe2[1])
-
-    @staticmethod
-    def is_connection_valid(pe1, pe2, alpha):
-        """
-        Verifica se a conexão entre dois PEs é válida com base no limiar alpha.
-        """
-        return Mapping_generator.calculate_distance(pe1, pe2) <= alpha
-
-    
-    '''
-    Metodo:
-        Realiza o mapeamento dos nós de um grafo no CGRA utilizando BFS (Busca em Largura).
-        O mapeamento associa cada nó a uma unidade de processamento do CGRA, considerando
-        as conexões válidas com base no limiar alpha.
-
-    inputs:
-        graph_edges (list[list]): Lista de arestas do grafo, onde cada aresta conecta dois nós.
-        cgra (CGRA): Instância da arquitetura CGRA.
-        alpha (int): Limiar de distância para conexões válidas.
-
-    outputs:
-        mapped_nodes (dict): Dicionário onde as chaves são os nós do grafo e os valores
-        são as posições correspondentes no CGRA.
-    '''
-    @staticmethod
-    def mapping(graph_edges, cgra: CGRA, alpha):
-        linhas, colunas = cgra.cgra_dim
         visited = set()
-        start = (random.randint(0, linhas - 1), random.randint(0, colunas - 1))
-        queue = deque([start])
-        mapped_nodes = {}
-        node_count = len(set(n for edge in graph_edges for n in edge))
 
-        while queue and len(mapped_nodes) < node_count:
-            current = queue.popleft()
-            if current in visited:
-                continue
-            visited.add(current)
+        def dfs(node):
+            if node not in visited:
+                visited.add(node)
+                for neighbor in mapping.dfg_edges[node]:
+                    dfs(neighbor)
 
-            node = len(mapped_nodes)
-            mapped_nodes[node] = current
+        start_node = next(iter(mapping.dfg_edges))
+        dfs(start_node)
 
-            neighbors = Mapping_generator.get_neighbors_mesh(current, cgra.cgra_dim)
-            valid_neighbors = [n for n in neighbors if Mapping_generator.is_connection_valid(current, n, alpha)]
-        
-            if valid_neighbors:
-                queue.extend(valid_neighbors)
-        return mapped_nodes
+        return len(visited) == self.dfg_tam
     
-    
-    
+    """
+    Realiza um placement aleatório dos nós no CGRA.
+
+    Input:
+        mapping (Mapping): Contem os dados do mapeamento.
+
+    Ouput:
+        Atualiza o valor do placement no Mapping.
+    """
+    def Placement(self, mapping: Mapping):
+
+        rows, cols = self.CGRA.cgra_dim
+        max = rows * cols * self.II
+
+        if max < self.dfg_tam:
+            raise ValueError("Capacidade insuficiente!!")
+
+        available_positions = [
+            (row, col, cycle)
+            for row in range(rows)
+            for col in range(cols)
+            for cycle in range(self.II)
+        ]
+        random.shuffle(available_positions)
+
+        for node in range(self.dfg_tam):
+            if not available_positions:
+                raise ValueError(f"Capacidade insuficiente!!")
+            mapping.placement[node] = available_positions.pop()
+
+    """
+    Realiza o roteamentodas conexões no CGRA, com um numero maximo de tentativas pré-estabelecidas, esta sem limite para testes por enqunato.
+
+    Input:
+        mapping (Mapping): Contem os dados do mapeamento.
+        alpha (float): Probabilidade de criar novas conexões.
+        alpha2 (float): Probabilidade de remover conexões existentes.
+
+    Ouput:
+        Atualiza o valor do Routing em Mapping, e retorna as arestas do DFG.
+    """
+    def Routing(self, mapping: Mapping, alpha, alpha2):
+        max_attempts = 10
+
+        rows, cols = self.CGRA.cgra_dim
+
+        for attempt in range(max_attempts):
+            mapping.dfg_edges = defaultdict(list)
+            mapping.routing = []
+
+            queue = deque([random.randint(0, self.dfg_tam - 1)])
+            visited = set(queue)
+
+            position_to_node = {pos: node for node, pos in mapping.placement.items()}
+
+            while queue:
+                current_node = queue.popleft()
+                current_cycle = mapping.placement[current_node][2]
+                neighbors = self.get_neighbors_mesh(current_node, (rows, cols), current_cycle)
+
+                for neighbor_pos in neighbors:
+                    if neighbor_pos not in position_to_node:
+                        continue
+
+                    neighbor_node = position_to_node[neighbor_pos]
+
+                    if neighbor_node == current_node:
+                        continue
+
+                    if neighbor_node not in visited:
+                        mapping.dfg_edges[current_node].append(neighbor_node)
+                        mapping.routing.append((current_node, neighbor_node))
+                        queue.append(neighbor_node)
+                        visited.add(neighbor_node)
+
+                    else:
+                        if random.random() < alpha:
+                            mapping.dfg_edges[current_node].append(neighbor_node)
+                            mapping.routing.append((current_node, neighbor_node))
+
+                            if random.random() < alpha2 and mapping.dfg_edges[neighbor_node]:
+                                target_to_remove = random.choice(list(mapping.dfg_edges[neighbor_node]))
+                                mapping.routing.remove((neighbor_node, target_to_remove))
+
+            if self.is_connected(mapping):
+                return mapping.dfg_edges
+
+
+    """
+    Realiza o mapeamento completo (placement + routing) de um DFG no CGRA.
+
+    Returns:
+        Mapping: O mapeamento gerado.
+    """
+    def mapp(self):
+
+        while True:
+            mapping = Mapping(self.dfg_tam)
+            self.Placement(mapping)
+            self.Routing(mapping, self.alpha, self.alpha2)
+            if self.is_connected(mapping):
+                return mapping
+            
+    """
+    Calcula os vizinhos de um nó, no ciclo atual e também no próximo ciclo.
+
+    Input:
+        node (int): Indice do no.
+        cgra_dim (tuple): Dimensões do CGRA (linhas, colunas).
+        cycle (int): Ciclo atual do nó.
+
+    Returns:
+        list[tuple]: Lista dos vizinhos no formato (row, col, cycle).
+    """
+    def get_neighbors_mesh(self, node, cgra_dim, cycle):
+       
+
+        rows, cols = cgra_dim
+        r_node = node // cols
+        c_node = node % cols
+
+        neighbors = []
+
+        if r_node > 0:
+            neighbors.append((r_node - 1, c_node, cycle))
+        if r_node < rows - 1:
+            neighbors.append((r_node + 1, c_node, cycle))
+        if c_node > 0:
+            neighbors.append((r_node, c_node - 1, cycle))
+        if c_node < cols - 1:
+            neighbors.append((r_node, c_node + 1, cycle))
+
+        if self.II > 0:
+            cycle_prox = (cycle + 1) % self.II
+            if r_node > 0:
+                neighbors.append((r_node - 1, c_node, cycle_prox))
+            if r_node < rows - 1:
+                neighbors.append((r_node + 1, c_node, cycle_prox))
+            if c_node > 0:
+                neighbors.append((r_node, c_node - 1, cycle_prox))
+            if c_node < cols - 1:
+                neighbors.append((r_node, c_node + 1, cycle_prox))
+
+        return neighbors
