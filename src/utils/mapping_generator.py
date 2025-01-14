@@ -131,7 +131,8 @@ class Mapping_generator:
 
                             if random.random() < alpha2 and mapping.dfg_edges[neighbor_node]:
                                 target_to_remove = random.choice(list(mapping.dfg_edges[neighbor_node]))
-                                mapping.routing.remove((neighbor_node, target_to_remove))
+                                if (neighbor_node, target_to_remove) in mapping.routing:
+                                    mapping.routing.remove((neighbor_node, target_to_remove))
 
             if self.is_connected(mapping):
                 return mapping.dfg_edges
