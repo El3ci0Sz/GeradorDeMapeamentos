@@ -88,7 +88,6 @@ class Mapping_generator:
         for attempt in range(max_attempts):
             mapping.dfg_edges = defaultdict(list)
             mapping.routing = []
-            mapping.neighbors = defaultdict(list)
 
             position_to_node = {pos: node for node, pos in mapping.placement.items()}
             visited = set()
@@ -101,7 +100,6 @@ class Mapping_generator:
                 current_pos = mapping.placement[current_node]
 
                 neighbors = self.get_neighbors_mesh(mapping, current_node)
-                mapping.neighbors[current_node] = neighbors
 
                 if len(visited) > self.dfg_tam * 2:
                     raise RuntimeError("Timeout no roteamento devido a possíveis loops infinitos.")
