@@ -127,15 +127,6 @@ class Mapping_generator:
                             target_to_remove = random.choice(list(mapping.dfg_edges[neighbor_node]))
                             mapping.dfg_edges[neighbor_node].remove(target_to_remove)
 
-        for source, targets in mapping.dfg_edges.items():
-            for target in targets:
-                if (source, target) not in mapping.routing:
-                    path = self.get_routing_path(mapping, source, target)
-                    if path:
-                        mapping.routing[(source, target)] = path
-                    else:
-                        raise ValueError(f"Roteamento falhou entre {source} e {target}.")
-
 
     def mapp(self, max_attempts=20000):
         """
@@ -155,6 +146,7 @@ class Mapping_generator:
             mapping = Mapping(self.dfg_tam)
             self.Placement(mapping)
             self.Routing(mapping)
+            self.get_routing_path(mapping)
             if self.is_connected(mapping) and not self.has_cycle(mapping.dfg_edges) and self.is_balanced(mapping):
                 return mapping
 
@@ -195,33 +187,34 @@ class Mapping_generator:
 
         return neighbors
     
-    @staticmethod
-    def get_routing_path(mapping, src, dst):
+    @staticmethod  
+    def get_routing_path(mapping):
         """
         Retorna o caminho de roteamento de um nó para outro.
 
         Args:
             mapping (Mapping): Objeto contendo o mapeamento.
-            src (int): Nó de origem.
-            dst (int): Nó de destino.
-
-        Returns:
-            list: Caminho do roteamento (ex: [0, 1, 2]).
         """
-        def dfs(current, path):
+        def dfs(current, path, dst):
             if current == dst:
                 return path
             for next_node in mapping.dfg_edges.get(current, []):
                 if next_node not in path:
-                    result = dfs(next_node, path + [next_node])
+                    result = dfs(next_node, path + [next_node], dst)
                     if result:
                         return result
             return None
 
-        path = dfs(src, [src])
-        if path:
-            return path
-        raise ValueError(f"Não foi encontrado um caminho de {src} para {dst}.")
+        for source, targets in mapping.dfg_edges.items():
+            for target in targets:
+                if (source, target) not in mapping.routing:
+                    path = dfs(source, [source], target)
+                    if path:
+                        mapping.routing[(source, target)] = path
+                    else:
+                        raise ValueError(f"Roteamento falhou entre {source} e {target}.")
+
+        
 
     def has_cycle(self, dfg_edges):
         """
