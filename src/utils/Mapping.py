@@ -1,6 +1,6 @@
 class Mapping:
-  def __init__(self,vertices):
-    self.routing = []
+  def __init__(self,num_vertices):
+    self.routing = {}
     self.placement: dict = {}
     self.dfg_edges: dict = {}
-    self.dfg_vertices = vertices
+    self.dfg_vertices = list(range(num_vertices)) 
