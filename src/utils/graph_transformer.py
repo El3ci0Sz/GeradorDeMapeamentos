@@ -128,7 +128,7 @@ class Graph_Transformer:
                 if not allow_disconnected:
                     temp_edges = mapping.dfg_edges.copy()
                     temp_edges.pop(leaf)
-                    if not Graph_Transformer.is_connected(temp_edges, mapping.dfg_vertices):
+                    if not Graph_Transformer.is_connected(temp_edges, len(mapping.dfg_vertices)):
                         continue
                 for src in list(mapping.dfg_edges.keys()):
                     if leaf in mapping.dfg_edges[src]:
@@ -141,7 +141,7 @@ class Graph_Transformer:
                 if not allow_disconnected:
                     temp_edges = mapping.dfg_edges.copy()
                     temp_edges.pop(root)
-                    if not Graph_Transformer.is_connected(temp_edges, mapping.dfg_vertices):
+                    if not Graph_Transformer.is_connected(temp_edges, len(mapping.dfg_vertices)):
                         continue
                 del mapping.dfg_edges[root]
 
