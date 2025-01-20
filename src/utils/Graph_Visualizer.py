@@ -1,10 +1,13 @@
+from collections import deque, defaultdict
 import matplotlib.pyplot as plt
 import networkx as nx
+from src.utils.Mapping import Mapping
+import random
 
 class Graph_Visualizer:
     
     @staticmethod
-    def export_to_dot(mapping, filename="graph.dot"):
+    def export_to_dot(mapping: Mapping, filename="graph.dot"):
         """
         Exporta o grafo gerado para um arquivo DOT.
 
@@ -14,14 +17,15 @@ class Graph_Visualizer:
         """
         G = nx.DiGraph()
 
-        # Adiciona os nós e suas posições
         for node, pos in mapping.placement.items():
-            G.add_node(node, pos=f"{pos}")
+            if len(pos) == 3 and all(isinstance(coord, (int, float)) for coord in pos):
+                pos_str = f"{pos[0]},{pos[1]},{pos[2]}"
+                G.add_node(node, position=pos_str)
+            else:
+                print(f"Aviso: Posição inválida para o nó {node}: {pos}")
 
-        # Adiciona as arestas
-        for src, neighbors in mapping.dfg_edges.items():
-            for dst in neighbors:
-                G.add_edge(src, dst)
+        for (src, dst), path in mapping.routing.items():
+            G.add_edge(src, dst, path=str(path))
 
         nx.drawing.nx_agraph.write_dot(G, filename)
         print(f"Grafo exportado para {filename}")
@@ -53,7 +57,6 @@ class Graph_Visualizer:
         rows, cols = cgra_dim
         fig, ax = plt.subplots(figsize=(cols, rows))
 
-        # Configurações da grade
         ax.set_xlim(-0.5, cols - 0.5)
         ax.set_ylim(-0.5, rows - 0.5)
         ax.set_xticks(range(cols))
@@ -62,27 +65,24 @@ class Graph_Visualizer:
         ax.set_aspect('equal')
         ax.invert_yaxis()
 
-        # Adiciona os nós do placement
         for node, (x, y, z) in mapping.placement.items():
             ax.text(y, x, f"{node}\n({x},{y},{z})", ha='center', va='center', fontsize=8, color='blue')
 
-        # Adiciona conexões do roteamento, se solicitado
         if routing:
-            for src, dst in mapping.routing:
+            for (src, dst), path in mapping.routing.items():
                 src_pos = mapping.placement[src]
                 dst_pos = mapping.placement[dst]
 
-                # Conexão (x, y)
-                ax.arrow(src_pos[1], src_pos[0], dst_pos[1] - src_pos[1], dst_pos[0] - src_pos[0],
-                         head_width=0.2, head_length=0.2, fc='red', ec='red', length_includes_head=True)
+                ax.arrow(src_pos[1], src_pos[0],
+                         dst_pos[1] - src_pos[1],
+                         dst_pos[0] - src_pos[0],
+                         head_width=0.2, head_length=0.2,
+                         fc='red', ec='red', length_includes_head=True)
 
-        # Títulos e rótulos
-        title = "CGRA: Placement e Roteamento" if routing else "CGRA: Placement"
-        ax.set_title(title)
+        ax.set_title("CGRA: Placement e Roteamento" if routing else "CGRA: Placement")
         ax.set_xlabel("Coluna (y)")
         ax.set_ylabel("Linha (x)")
 
-        # Salva a figura
         plt.savefig(output_file)
         print(f"Imagem salva em {output_file}")
         plt.close(fig)
