@@ -82,82 +82,92 @@ class Mapping_generator:
             mapping.placement[node] = available_positions.pop()
 
     def Routing(self, mapping: Mapping):
-        max_attempts = 10
-        rows, cols = self.CGRA.cgra_dim
-
-        for attempt in range(max_attempts):
-            mapping.dfg_edges = defaultdict(list)
-            mapping.routing = []
-
-            position_to_node = {pos: node for node, pos in mapping.placement.items()}
-            visited = set()
-
-            queue = deque([random.randint(0, self.dfg_tam - 1)])
-            visited.add(queue[0])
-
-            while queue:
-                current_node = queue.popleft()
-                current_pos = mapping.placement[current_node]
-
-                neighbors = self.get_neighbors_mesh(mapping, current_node)
-
-                if len(visited) > self.dfg_tam * 2:
-                    raise RuntimeError("Timeout no roteamento devido a possíveis loops infinitos.")
-
-                for neighbor_pos in neighbors:
-                    if neighbor_pos not in position_to_node:
-                        continue
-
-                    neighbor_node = position_to_node[neighbor_pos]
-
-                    if neighbor_node == current_node:
-                        continue
-
-                    if neighbor_node in mapping.dfg_edges[current_node] or current_node in mapping.dfg_edges[neighbor_node]:
-                        continue
-
-                    if neighbor_node not in visited:
-                        mapping.dfg_edges[current_node].append(neighbor_node)
-                        mapping.routing.append((current_node, neighbor_node))
-                        queue.append(neighbor_node)
-                        visited.add(neighbor_node)
-
-                    else:
-                        if random.random() < self.alpha:
-                            mapping.dfg_edges[current_node].append(neighbor_node)
-                            mapping.routing.append((current_node, neighbor_node))
-
-                            if random.random() < self.alpha2 and mapping.dfg_edges[neighbor_node]:
-                                target_to_remove = random.choice(list(mapping.dfg_edges[neighbor_node]))
-                                if (neighbor_node, target_to_remove) in mapping.routing:
-                                    mapping.routing.remove((neighbor_node, target_to_remove))
-
-            if self.is_connected(mapping):
-                return mapping.dfg_edges
-
-    def mapp(self):
         """
-        Realiza o mapeamento completo (placement + routing) do DFG no CGRA.
+        Realiza o roteamento do DFG no CGRA, gerando os caminhos de roteamento.
+
+        Args:
+            mapping (Mapping): Objeto contendo dados do mapeamento.
+        """
+        mapping.dfg_edges = defaultdict(list)
+        mapping.routing = {}  # Inicializar como dicionário para salvar caminhos completos.
+
+        position_to_node = {pos: node for node, pos in mapping.placement.items()}
+        visited = set()
+
+        queue = deque([random.randint(0, self.dfg_tam - 1)])
+        visited.add(queue[0])
+
+        while queue:
+            current_node = queue.popleft()
+
+            neighbors = self.get_neighbors_mesh(mapping, current_node)
+
+            for neighbor_pos in neighbors:
+                if neighbor_pos not in position_to_node:
+                    continue
+
+                neighbor_node = position_to_node[neighbor_pos]
+
+                if neighbor_node == current_node:
+                    continue
+
+                if neighbor_node in mapping.dfg_edges[current_node] or current_node in mapping.dfg_edges[neighbor_node]:
+                    continue
+
+                if neighbor_node not in visited:
+                    mapping.dfg_edges[current_node].append(neighbor_node)
+                    queue.append(neighbor_node)
+                    visited.add(neighbor_node)
+
+                else:
+                    if random.random() < self.alpha:
+                        mapping.dfg_edges[current_node].append(neighbor_node)
+
+                        if random.random() < self.alpha2 and mapping.dfg_edges[neighbor_node]:
+                            target_to_remove = random.choice(list(mapping.dfg_edges[neighbor_node]))
+                            mapping.dfg_edges[neighbor_node].remove(target_to_remove)
+
+        for source, targets in mapping.dfg_edges.items():
+            for target in targets:
+                if (source, target) not in mapping.routing:
+                    path = self.get_routing_path(mapping, source, target)
+                    if path:
+                        mapping.routing[(source, target)] = path
+                    else:
+                        raise ValueError(f"Roteamento falhou entre {source} e {target}.")
+
+
+    def mapp(self, max_attempts=20000):
+        """
+        Realiza o mapeamento completo (placement + routing) do DFG no CGRA,
+        garantindo que o mapeamento seja balanceado.
+
+        Args:
+            max_attempts (int): Número máximo de tentativas para encontrar um mapeamento balanceado.
 
         Returns:
             Mapping: Objeto contendo o mapeamento gerado.
+
+        Raises:
+            ValueError: Se o número máximo de tentativas for atingido sem encontrar um mapeamento balanceado.
         """
-        while True:
+        for attempt in range(max_attempts):
             mapping = Mapping(self.dfg_tam)
             self.Placement(mapping)
             self.Routing(mapping)
-            if self.is_connected(mapping):
+            if self.is_connected(mapping) and not self.has_cycle(mapping.dfg_edges) and self.is_balanced(mapping):
                 return mapping
+
+        raise ValueError("Não foi possível encontrar um mapeamento balanceado após {max_attempts} tentativas.")
 
     def get_neighbors_mesh(self, mapping, node):
         """
-        Retorna os vizinhos de um nó no CGRA com base na posição atual.
+        Retorna os vizinhos de um nó no CGRA com base na posição atual,
+        considerando a conexão ao mesmo nó no próximo ciclo e aos vizinhos no próximo ciclo.
 
         Args:
             mapping (Mapping): Objeto contendo o mapeamento atual.
             node (int): Nó atual.
-            cgra_dim (tuple): Dimensões do CGRA (linhas, colunas).
-            cycle (int): Ciclo atual.
 
         Returns:
             list: Lista de posições (linha, coluna, ciclo) dos vizinhos.
@@ -170,24 +180,162 @@ class Mapping_generator:
         r_node, c_node, cycle_node = mapping.placement[node]
         neighbors = []
 
-        if r_node > 0:
-            neighbors.append((r_node - 1, c_node, cycle_node))
-        if r_node < rows - 1:
-            neighbors.append((r_node + 1, c_node, cycle_node))
-        if c_node > 0:
-            neighbors.append((r_node, c_node - 1, cycle_node))
-        if c_node < cols - 1:
-            neighbors.append((r_node, c_node + 1, cycle_node))
+        next_cycle = (cycle_node + 1) % self.II
 
-        if self.II > 0:
-            next_cycle = (cycle_node + 1) % self.II
-            if r_node > 0:
-                neighbors.append((r_node - 1, c_node, next_cycle))
-            if r_node < rows - 1:
-                neighbors.append((r_node + 1, c_node, next_cycle))
-            if c_node > 0:
-                neighbors.append((r_node, c_node - 1, next_cycle))
-            if c_node < cols - 1:
-                neighbors.append((r_node, c_node + 1, next_cycle))
+        neighbors.append((r_node, c_node, next_cycle))
+
+        if r_node > 0:
+            neighbors.append((r_node - 1, c_node, next_cycle))
+        if r_node < rows - 1:
+            neighbors.append((r_node + 1, c_node, next_cycle))
+        if c_node > 0:
+            neighbors.append((r_node, c_node - 1, next_cycle))
+        if c_node < cols - 1:
+            neighbors.append((r_node, c_node + 1, next_cycle))
 
         return neighbors
+    
+    @staticmethod
+    def get_routing_path(mapping, src, dst):
+        """
+        Retorna o caminho de roteamento de um nó para outro.
+
+        Args:
+            mapping (Mapping): Objeto contendo o mapeamento.
+            src (int): Nó de origem.
+            dst (int): Nó de destino.
+
+        Returns:
+            list: Caminho do roteamento (ex: [0, 1, 2]).
+        """
+        def dfs(current, path):
+            if current == dst:
+                return path
+            for next_node in mapping.dfg_edges.get(current, []):
+                if next_node not in path:
+                    result = dfs(next_node, path + [next_node])
+                    if result:
+                        return result
+            return None
+
+        path = dfs(src, [src])
+        if path:
+            return path
+        raise ValueError(f"Não foi encontrado um caminho de {src} para {dst}.")
+
+    def has_cycle(self, dfg_edges):
+        """
+        Detecta se há ciclos em um grafo direcionado.
+
+        Args:
+            dfg_edges (dict): Dicionário de adjacência representando o grafo.
+
+        Returns:
+            bool: True se houver ciclo, False caso contrário.
+        """
+        visited = set()
+        stack = set()
+
+        def dfs(node, path):
+            if node in stack:
+                return True, path + [node]
+            if node in visited:
+                return False, []
+
+            visited.add(node)
+            stack.add(node)
+
+            for neighbor in dfg_edges.get(node, []):
+                has_cycle, cycle_path = dfs(neighbor, path + [node])
+                if has_cycle:
+                    return True, cycle_path
+
+            stack.remove(node)
+            return False, []
+
+        for node in dfg_edges.keys():
+            has_cycle, cycle_path = dfs(node, [])
+            if has_cycle:
+                return True
+
+        return False
+    
+    @staticmethod
+    def calculate_predecessors_and_levels(dfg_edges):
+        
+        """
+        Calcula os predecessores e os níveis de cada nó no grafo de fluxo de dados (DFG).
+
+        Args:
+            dfg_edges (dict): Dicionário onde as chaves são nós e os valores são listas
+                              de nós destino representando as arestas do DFG.
+
+        Returns:
+            tuple: Um dicionário com os predecessores de cada nó e um dicionário com os
+                   níveis de cada nó no DFG.
+
+        Raises:
+            ValueError: Se forem detectados ciclos no DFG.
+        """
+
+        predecessors = {node: [] for node in dfg_edges}
+        levels = {}
+        
+        for node, edges in dfg_edges.items():
+            for dest in edges:
+                predecessors[dest].append(node)
+        
+        aux_predecessors = {node: preds.copy() for node, preds in predecessors.items()}
+        
+        nodes_without_predecessors = deque(node for node, preds in aux_predecessors.items() if not preds)
+        visited = set() 
+        current_level = 0
+        
+        while nodes_without_predecessors:
+            next_nodes = deque()
+            for node in nodes_without_predecessors:
+                if node in visited:
+                    continue
+                visited.add(node)
+                levels[node] = current_level
+                
+                for dest in dfg_edges.get(node, []):
+                    aux_predecessors[dest].remove(node)
+                    if not aux_predecessors[dest]:
+                        next_nodes.append(dest)
+            
+            nodes_without_predecessors = next_nodes
+            current_level += 1
+        
+
+        nodes_in_cycles = set(dfg_edges.keys()) - visited
+        if nodes_in_cycles:
+            raise ValueError(f"Ciclo detectado nos nós: {nodes_in_cycles}")
+        
+        return predecessors, levels
+    
+    def is_balanced(self, mapping:Mapping):
+        
+        """
+        Verifica se os predecessores de cada nó no DFG estão no mesmo nível.
+
+        Args:
+            mapping (Mapping): Objeto contendo os vértices e arestas do DFG.
+
+        Returns:
+            bool: True se todos os predecessores de cada nó estiverem no mesmo nível, False caso contrário.
+
+        Raises:
+            ValueError: Se o DFG apresentar ciclos.
+        """
+
+        predecessors, levels = self.calculate_predecessors_and_levels(mapping.dfg_edges)
+
+        for node in mapping.dfg_vertices:
+            preds = predecessors[node]
+            if preds:
+                pred_levels = {levels[pred] for pred in preds}
+                if len(pred_levels) > 1:
+                    print(f"Nó {node} tem predecessores em diferentes níveis: {pred_levels}")
+                    return False
+        return True
