@@ -336,6 +336,5 @@ class Mapping_generator:
             if preds:
                 pred_levels = {levels[pred] for pred in preds}
                 if len(pred_levels) > 1:
-                    print(f"Nó {node} tem predecessores em diferentes níveis: {pred_levels}")
                     return False
         return True
