@@ -44,9 +44,53 @@ class Graph_Visualizer:
         print(f"Imagem gerada: {output_file}")
 
     @staticmethod
+    import matplotlib.pyplot as plt
+import networkx as nx
+from src.utils.Mapping import Mapping
+
+class Graph_Visualizer:
+    
+    @staticmethod
+    def export_to_dot(mapping: Mapping, filename="graph.dot"):
+        """
+        Exporta o grafo gerado para um arquivo DOT.
+
+        Args:
+            mapping (Mapping): Objeto contendo o mapeamento.
+            filename (str): Nome do arquivo DOT.
+        """
+        G = nx.DiGraph()
+
+        for node, pos in mapping.placement.items():
+            if len(pos) == 3 and all(isinstance(coord, (int, float)) for coord in pos):
+                pos_str = f"{pos[0]},{pos[1]},{pos[2]}"
+                G.add_node(node, position=pos_str)
+            else:
+                print(f"Aviso: Posição inválida para o nó {node}: {pos}")
+
+        for (src, dst), path in mapping.routing.items():
+            G.add_edge(src, dst, path=str(path))
+
+        nx.drawing.nx_agraph.write_dot(G, filename)
+        print(f"Grafo exportado para {filename}")
+
+    @staticmethod
+    def generate_image_from_dot(dot_file, output_file="graph.png"):
+        """
+        Gera uma imagem do grafo a partir de um arquivo DOT.
+
+        Args:
+            dot_file (str): Caminho para o arquivo DOT.
+            output_file (str): Nome do arquivo de saída da imagem.
+        """
+        import os
+        os.system(f"dot -Tpng {dot_file} -o {output_file}")
+        print(f"Imagem gerada: {output_file}")
+
+    @staticmethod
     def plot_cgra(mapping, cgra_dim, routing=True, output_file="cgra.png"):
         """
-        Gera uma representação gráfica do CGRA.
+        Gera uma representação gráfica do CGRA com subplots para cada ciclo de II.
 
         Args:
             mapping (Mapping): Objeto contendo o mapeamento.
@@ -55,34 +99,43 @@ class Graph_Visualizer:
             output_file (str): Nome do arquivo para salvar a imagem.
         """
         rows, cols = cgra_dim
-        fig, ax = plt.subplots(figsize=(cols, rows))
+        II = max(pos[2] for pos in mapping.placement.values()) + 1
+        fig, axes = plt.subplots(nrows=1, ncols=II, figsize=(5 * II, 5))
 
-        ax.set_xlim(-0.5, cols - 0.5)
-        ax.set_ylim(-0.5, rows - 0.5)
-        ax.set_xticks(range(cols))
-        ax.set_yticks(range(rows))
-        ax.grid(True, linestyle='--', linewidth=0.5)
-        ax.set_aspect('equal')
-        ax.invert_yaxis()
+        if II == 1:
+            axes = [axes]
 
-        for node, (x, y, z) in mapping.placement.items():
-            ax.text(y, x, f"{node}\n({x},{y},{z})", ha='center', va='center', fontsize=8, color='blue')
+        for cycle in range(II):
+            ax = axes[cycle]
+            ax.set_xlim(-0.5, cols - 0.5)
+            ax.set_ylim(-0.5, rows - 0.5)
+            ax.set_xticks(range(cols))
+            ax.set_yticks(range(rows))
+            ax.grid(True, linestyle='--', linewidth=0.5)
+            ax.set_aspect('equal')
+            ax.invert_yaxis()
 
-        if routing:
-            for (src, dst), path in mapping.routing.items():
-                src_pos = mapping.placement[src]
-                dst_pos = mapping.placement[dst]
+            for node, (x, y, z) in mapping.placement.items():
+                if z == cycle:
+                    ax.text(y, x, f"{node}\n({x},{y},{z})", ha='center', va='center', fontsize=8, color='blue')
 
-                ax.arrow(src_pos[1], src_pos[0],
-                         dst_pos[1] - src_pos[1],
-                         dst_pos[0] - src_pos[0],
-                         head_width=0.2, head_length=0.2,
-                         fc='red', ec='red', length_includes_head=True)
+            if routing:
+                for (src, dst), path in mapping.routing.items():
+                    if mapping.placement[src][2] == cycle and mapping.placement[dst][2] == cycle:
+                        src_pos = mapping.placement[src]
+                        dst_pos = mapping.placement[dst]
 
-        ax.set_title("CGRA: Placement e Roteamento" if routing else "CGRA: Placement")
-        ax.set_xlabel("Coluna (y)")
-        ax.set_ylabel("Linha (x)")
+                        ax.arrow(src_pos[1], src_pos[0],
+                                dst_pos[1] - src_pos[1],
+                                dst_pos[0] - src_pos[0],
+                                head_width=0.2, head_length=0.2,
+                                fc='red', ec='red', length_includes_head=True)
 
+            ax.set_title(f"Cycle {cycle}")
+            ax.set_xlabel("Coluna (y)")
+            ax.set_ylabel("Linha (x)")
+
+        plt.tight_layout()
         plt.savefig(output_file)
         print(f"Imagem salva em {output_file}")
         plt.close(fig)
