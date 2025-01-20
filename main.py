@@ -16,8 +16,6 @@ def functional_test():
 
     print("=== Teste: map_dfg_to_cgra ===")
     mapping = mapping_generator.mapp()
-    print("\n\nArestas")
-    print(mapping.dfg_edges)
     print("\n\nResultados do Mapeamento:")
     print("- Placement (Posições dos Nós no CGRA):")
     for node, position in mapping.placement.items():
@@ -28,7 +26,6 @@ def functional_test():
         print(f"  Nó {node}: {neighbors}")
 
     print("\n- Routing (Roteamento das Arestas):")
-    print(mapping.routing)
     for route, path in mapping.routing.items(): 
         print(f"  Roteamento: {route} | Caminho : {path}")
 
