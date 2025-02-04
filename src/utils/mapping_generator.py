@@ -89,7 +89,7 @@ class Mapping_generator:
             mapping (Mapping): Objeto contendo dados do mapeamento.
         """
         mapping.dfg_edges = defaultdict(list)
-        mapping.routing = {}  # Inicializar como dicionário para salvar caminhos completos.
+        mapping.routing = {}
 
         position_to_node = {pos: node for node, pos in mapping.placement.items()}
         visited = set()
@@ -128,7 +128,7 @@ class Mapping_generator:
                             mapping.dfg_edges[neighbor_node].remove(target_to_remove)
 
 
-    def mapp(self, max_attempts=20000):
+    def mapp(self, max_attempts=200000):
         """
         Realiza o mapeamento completo (placement + routing) do DFG no CGRA,
         garantindo que o mapeamento seja balanceado.

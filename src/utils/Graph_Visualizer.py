@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 from src.utils.Mapping import Mapping
+import os
 
 class Graph_Visualizer:
     
@@ -26,20 +27,19 @@ class Graph_Visualizer:
             G.add_edge(src, dst, path=str(path))
 
         nx.drawing.nx_agraph.write_dot(G, filename)
-        print(f"Grafo exportado para {filename}")
-
+    
     @staticmethod
-    def generate_image_from_dot(dot_file, output_file="graph.png"):
+    def generate_image_from_dot(dot_file):
         """
-        Gera uma imagem do grafo a partir de um arquivo DOT.
+        Gera uma imagem do grafo a partir de um arquivo DOT e salva no mesmo diretório.
 
         Args:
             dot_file (str): Caminho para o arquivo DOT.
-            output_file (str): Nome do arquivo de saída da imagem.
         """
-        import os
+        directory = os.path.dirname(dot_file)
+        output_file = os.path.join(directory, os.path.splitext(os.path.basename(dot_file))[0] + ".png")
+
         os.system(f"dot -Tpng {dot_file} -o {output_file}")
-        print(f"Imagem gerada: {output_file}")
 
     @staticmethod
     def plot_cgra(mapping, cgra_dim, routing=True, output_file="cgra.png"):
