@@ -19,20 +19,20 @@ class Graph_Transformer:
     """
     @staticmethod
     def flip(dfg_mapping, cgra_dim, axis):
-        
         rows, cols = cgra_dim
 
         if axis not in ["horizontal", "vertical"]:
             raise ValueError("Eixo deve ser 'horizontal' ou 'vertical'.")
 
         flip_mapping = {}
-        for node, (r, c) in dfg_mapping.items():
+        for node, (r, c, z) in dfg_mapping.items():
             if axis == "horizontal":
-                flip_mapping[node] = (rows - 1 - r, c)
+                flip_mapping[node] = (rows - 1 - r, c, z)
             elif axis == "vertical":
-                flip_mapping[node] = (r, cols - 1 - c)
+                flip_mapping[node] = (r, cols - 1 - c, z)
         
         return flip_mapping
+
 
     """
     Desloca os nós do mapeamento por shift_x (horizontal) e shift_y (vertical).
@@ -52,10 +52,10 @@ class Graph_Transformer:
         rows, cols = cgra_dim
         shifted_mapping = {}
 
-        for node, (r, c) in dfg_mapping.items():
+        for node, (r, c, z) in dfg_mapping.items():
             new_r = (r + shift_y) % rows
             new_c = (c + shift_x) % cols
-            shifted_mapping[node] = (new_r, new_c)
+            shifted_mapping[node] = (new_r, new_c, z)
         
         return shifted_mapping
 
@@ -79,13 +79,13 @@ class Graph_Transformer:
             raise ValueError("ERRO. Apenas 90, 180 e 270 graus são suportados")
 
         rotated_mapping = {}
-        for node, (r, c) in dfg_mapping.items():
+        for node, (r, c,z) in dfg_mapping.items():
             if degrees == 90:
-                rotated_mapping[node] = (c, rows - 1 - r)
+                rotated_mapping[node] = (c, rows - 1 - r, z)
             elif degrees == 180:
-                rotated_mapping[node] = (rows - 1 - r, cols - 1 - c)
+                rotated_mapping[node] = (rows - 1 - r, cols - 1 - c, z)
             elif degrees == 270:
-                rotated_mapping[node] = (cols - 1 - c, r)
+                rotated_mapping[node] = (cols - 1 - c, r, z)
 
         return rotated_mapping
 
@@ -159,11 +159,16 @@ class Graph_Transformer:
     """
     @staticmethod
     def is_connected(dfg_edges, total_nodes):
-        
         if not dfg_edges:
             return False
 
         visited = set()
+        all_nodes = set(dfg_edges.keys()).union(*dfg_edges.values())
+
+        if not all_nodes:
+            return False
+
+        start_node = next(iter(all_nodes))
 
         def dfs(node):
             if node not in visited:
@@ -171,7 +176,6 @@ class Graph_Transformer:
                 for neighbor in dfg_edges.get(node, []):
                     dfs(neighbor)
 
-        start_node = next(iter(dfg_edges))
         dfs(start_node)
 
-        return len(visited) == total_nodes
+        return visited == all_nodes
