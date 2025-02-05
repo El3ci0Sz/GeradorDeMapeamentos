@@ -5,28 +5,28 @@ import os
 
 class Graph_Visualizer:
     
-    @staticmethod
-    def export_to_dot(mapping: Mapping, filename="graph.dot"):
-        """
-        Exporta o grafo gerado para um arquivo DOT.
+    # @staticmethod
+    # def export_to_dot(mapping: Mapping, filename="graph.dot"):
+    #     """
+    #     Exporta o grafo gerado para um arquivo DOT.
 
-        Args:
-            mapping (Mapping): Objeto contendo o mapeamento.
-            filename (str): Nome do arquivo DOT.
-        """
-        G = nx.DiGraph()
+    #     Args:
+    #         mapping (Mapping): Objeto contendo o mapeamento.
+    #         filename (str): Nome do arquivo DOT.
+    #     """
+    #     G = nx.DiGraph()
 
-        for node, pos in mapping.placement.items():
-            if len(pos) == 3 and all(isinstance(coord, (int, float)) for coord in pos):
-                pos_str = f"{pos[0]},{pos[1]},{pos[2]}"
-                G.add_node(node, position=pos_str)
-            else:
-                print(f"Aviso: Posição inválida para o nó {node}: {pos}")
+    #     for node, pos in mapping.placement.items():
+    #         if len(pos) == 3 and all(isinstance(coord, (int, float)) for coord in pos):
+    #             pos_str = f"{pos[0]},{pos[1]},{pos[2]}"
+    #             G.add_node(node, position=pos_str)
+    #         else:
+    #             print(f"Aviso: Posição inválida para o nó {node}: {pos}")
 
-        for (src, dst), path in mapping.routing.items():
-            G.add_edge(src, dst, path=str(path))
+    #     for (src, dst), path in mapping.routing.items():
+    #         G.add_edge(src, dst, path=str(path))
 
-        nx.drawing.nx_agraph.write_dot(G, filename)
+    #     nx.drawing.nx_agraph.write_dot(G, filename)
     
     @staticmethod
     def generate_image_from_dot(dot_file):
@@ -73,17 +73,17 @@ class Graph_Visualizer:
                 if z == cycle:
                     ax.text(y, x, f"{node}\n({x},{y},{z})", ha='center', va='center', fontsize=8, color='blue')
 
-            if routing:
-                for (src, dst), path in mapping.routing.items():
-                    if mapping.placement[src][2] == cycle and mapping.placement[dst][2] == cycle:
-                        src_pos = mapping.placement[src]
-                        dst_pos = mapping.placement[dst]
+            # if routing:
+            #     for (src, dst), path in mapping.routing.items():
+            #         if mapping.placement[src][2] == cycle and mapping.placement[dst][2] == cycle:
+            #             src_pos = mapping.placement[src]
+            #             dst_pos = mapping.placement[dst]
 
-                        ax.arrow(src_pos[1], src_pos[0],
-                                dst_pos[1] - src_pos[1],
-                                dst_pos[0] - src_pos[0],
-                                head_width=0.2, head_length=0.2,
-                                fc='red', ec='red', length_includes_head=True)
+            #             ax.arrow(src_pos[1], src_pos[0],
+            #                     dst_pos[1] - src_pos[1],
+            #                     dst_pos[0] - src_pos[0],
+            #                     head_width=0.2, head_length=0.2,
+            #                     fc='red', ec='red', length_includes_head=True)
 
             ax.set_title(f"Cycle {cycle}")
             ax.set_xlabel("Coluna (y)")
@@ -93,3 +93,24 @@ class Graph_Visualizer:
         plt.savefig(output_file)
         print(f"Imagem salva em {output_file}")
         plt.close(fig)
+
+    @staticmethod
+    def export_to_dot(mapping: Mapping, filename="dfg_graph.dot"):
+        """
+        Exporta o DFG para um arquivo DOT, apartir de dfg_edges.
+
+        Args:
+            mapping (Mapping): Objeto contendo o DFG.
+            filename (str): Nome do arquivo DOT.
+        """
+        G = nx.DiGraph()
+
+        for node in mapping.dfg_edges.keys():
+            G.add_node(node)
+
+        for src, targets in mapping.dfg_edges.items():
+            for target in targets:
+                G.add_edge(src, target)
+
+        nx.drawing.nx_agraph.write_dot(G, filename)
+        print(f"DFG exportado para {filename}")
