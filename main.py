@@ -1,42 +1,52 @@
-from src.cgra.cgra import CGRA
+import matplotlib.pyplot as plt
+import os
 from src.utils.Mapping import Mapping
-from src.utils.mapping_generator import Mapping_generator
+import copy
 from src.utils.Graph_Visualizer import Graph_Visualizer
+from src.utils.graph_transformer import Graph_Transformer
+from src.utils.mapping_generator import Mapping_generator
+from src.cgra.cgra import CGRA
 
-def functional_test():
-    cgra_dim = (4, 4)
-    arch_name = "TestArchitecture"
-    cgra = CGRA(cgra_dim, arch_name)
-    dfg_tam = 16
-    II = 3
-    alpha = 0.6
-    alpha2 = 0.3
+dfg_tam = 10  
+II = 1 
+alpha = 0.2  
+alpha2 = 0.1  
+cgra_dim = (4, 4)  
 
-    mapping_generator = Mapping_generator(dfg_tam, II, alpha, alpha2, cgra)
+cgra = CGRA(cgra_dim, "Teste")
+mapping_generator = Mapping_generator(dfg_tam, II, alpha, alpha2, cgra)
 
-    print("=== Teste: map_dfg_to_cgra ===")
-    mapping = mapping_generator.mapp()
-    print("\n\nResultados do Mapeamento:")
-    print("- Placement (Posições dos Nós no CGRA):")
-    for node, position in mapping.placement.items():
-        print(f"  Nó {node}: {position}")
-    
-    print("\n- DFG Edges (Conexões no DFG):")
-    for node, neighbors in mapping.dfg_edges.items():
-        print(f"  Nó {node}: {neighbors}")
-
-    print("\n- Routing (Roteamento das Arestas):")
-    for route, path in mapping.routing.items(): 
-        print(f"  Roteamento: {route} | Caminho : {path}")
-
-    
-    Graph_Visualizer.export_to_dot(mapping, "example_graph.dot")
-    Graph_Visualizer.generate_image_from_dot("example_graph.dot", "example_graph.png")
-    Graph_Visualizer.plot_cgra(mapping, cgra_dim, routing=False, output_file="placement_only.png")
-    Graph_Visualizer.plot_cgra(mapping, cgra_dim, routing=True, output_file="placement_and_routing.png")
-
-   
+mapping = mapping_generator.mapp()
+mapping2 = mapping_generator.mapp()
+Graph_Visualizer.export_to_dot(mapping, "original.dot")
+Graph_Visualizer.generate_image_from_dot("original.dot")
+Graph_Visualizer.plot_cgra(mapping, cgra.cgra_dim, output_file="original_placement.png")
 
 
-if __name__ == "__main__":
-    functional_test()
+# Teste de Flip
+flipped_mapping = Graph_Transformer.flip(mapping.placement, cgra.cgra_dim, 'horizontal')
+mapping.placement = flipped_mapping
+Graph_Visualizer.plot_cgra(mapping, cgra.cgra_dim, output_file="flip_horizontal.png")
+
+# Teste de Shift
+shifted_mapping = Graph_Transformer.shift(mapping.placement, cgra.cgra_dim, 1, 1)
+mapping.placement = shifted_mapping
+Graph_Visualizer.plot_cgra(mapping, cgra.cgra_dim, output_file="shift.png")
+
+# Teste de Rotação
+rotated_mapping = Graph_Transformer.rotate(mapping.placement, cgra.cgra_dim, 90)
+mapping.placement = rotated_mapping
+Graph_Visualizer.plot_cgra(mapping, cgra.cgra_dim, output_file="rotate_90.png")
+
+#Teste de Inversão de Arestas
+temp_mapping = copy.deepcopy(mapping)   
+temp_mapping= Graph_Transformer.invert(temp_mapping)
+
+Graph_Visualizer.export_to_dot(temp_mapping, "inverted.dot")
+Graph_Visualizer.generate_image_from_dot("inverted.dot")
+
+# Teste de Remoção de Nós Folha
+pruned_mapping = copy.deepcopy(mapping)
+pruned_mapping = Graph_Transformer.prune(pruned_mapping, 'leaf', True)
+Graph_Visualizer.export_to_dot(pruned_mapping, "pruned.dot")
+Graph_Visualizer.generate_image_from_dot("pruned.dot")
