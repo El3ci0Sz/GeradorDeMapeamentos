@@ -1,6 +1,6 @@
 from collections import defaultdict
 from src.utils.Mapping import Mapping
-
+from copy import deepcopy
 class Graph_Transformer:
     """
     Classe para manipulação de grafos no contexto de CGRA e DFG.
@@ -48,15 +48,23 @@ class Graph_Transformer:
     """
     @staticmethod
     def shift(dfg_mapping, cgra_dim, shift_x, shift_y):
-      
         rows, cols = cgra_dim
         shifted_mapping = {}
+        occupied_positions = set()
 
         for node, (r, c, z) in dfg_mapping.items():
-            new_r = (r + shift_y) % rows
-            new_c = (c + shift_x) % cols
-            shifted_mapping[node] = (new_r, new_c, z)
-        
+            occupied_positions.add((r, c))
+
+        for node, (r, c, z) in dfg_mapping.items():
+            new_r = r + shift_y
+            new_c = c + shift_x
+
+            if 0 <= new_r < rows and 0 <= new_c < cols and (new_r, new_c) not in occupied_positions:
+                shifted_mapping[node] = (new_r, new_c, z)
+                occupied_positions.add((new_r, new_c))
+            else:
+                shifted_mapping[node] = (r, c, z)
+
         return shifted_mapping
 
     """
@@ -72,22 +80,27 @@ class Graph_Transformer:
     """
     @staticmethod
     def rotate(dfg_mapping, cgra_dim, degrees):
-        
         rows, cols = cgra_dim
-
         if degrees not in [90, 180, 270]:
-            raise ValueError("ERRO. Apenas 90, 180 e 270 graus são suportados")
+            raise ValueError("Apenas 90, 180 e 270 graus são permitidos.")
 
         rotated_mapping = {}
-        for node, (r, c,z) in dfg_mapping.items():
+
+        for node, (r, c, z) in dfg_mapping.items():
             if degrees == 90:
-                rotated_mapping[node] = (c, rows - 1 - r, z)
+                new_r, new_c = c, rows - 1 - r
             elif degrees == 180:
-                rotated_mapping[node] = (rows - 1 - r, cols - 1 - c, z)
+                new_r, new_c = rows - 1 - r, cols - 1 - c
             elif degrees == 270:
-                rotated_mapping[node] = (cols - 1 - c, r, z)
+                new_r, new_c = cols - 1 - c, r
+
+            if (new_r, new_c, z) in rotated_mapping.values():
+                raise ValueError(f"Colisão detectada ao rotacionar {degrees} graus.")
+
+            rotated_mapping[node] = (new_r, new_c, z)
 
         return rotated_mapping
+        
 
     """
     Inverte as arestas do DFG.
@@ -100,13 +113,17 @@ class Graph_Transformer:
     """
     @staticmethod
     def invert(mapping: Mapping):
-        
         inverted_edges = defaultdict(set)
+
+        for node in mapping.dfg_vertices:
+            inverted_edges[node] = set()
+
         for source, targets in mapping.dfg_edges.items():
             for target in targets:
                 inverted_edges[target].add(source)
+
         mapping.dfg_edges = inverted_edges
-        return mapping
+        return mapping 
 
     """
     Remove nós do grafo DFG.
@@ -126,9 +143,10 @@ class Graph_Transformer:
             leaves = [node for node in mapping.dfg_edges if not mapping.dfg_edges[node]]
             for leaf in leaves:
                 if not allow_disconnected:
-                    temp_edges = mapping.dfg_edges.copy()
+                    temp_edges = deepcopy(mapping.dfg_edges)
                     temp_edges.pop(leaf)
-                    if not Graph_Transformer.is_connected(temp_edges, len(mapping.dfg_vertices)):
+                    if not Graph_Transformer.is_connected(temp_edges):
+                        print("IFAUFUGHAUH\n")
                         continue
                 for src in list(mapping.dfg_edges.keys()):
                     if leaf in mapping.dfg_edges[src]:
@@ -139,9 +157,9 @@ class Graph_Transformer:
             roots = [node for node in mapping.dfg_edges if all(node not in targets for targets in mapping.dfg_edges.values())]
             for root in roots:
                 if not allow_disconnected:
-                    temp_edges = mapping.dfg_edges.copy()
+                    temp_edges = deepcopy(mapping.dfg_edges)
                     temp_edges.pop(root)
-                    if not Graph_Transformer.is_connected(temp_edges, len(mapping.dfg_vertices)):
+                    if not Graph_Transformer.is_connected(temp_edges):
                         continue
                 del mapping.dfg_edges[root]
 
@@ -158,17 +176,16 @@ class Graph_Transformer:
         bool: True se o grafo for conectado, False caso contrário.
     """
     @staticmethod
-    def is_connected(dfg_edges, total_nodes):
+    def is_connected(dfg_edges):
         if not dfg_edges:
             return False
 
         visited = set()
-        all_nodes = set(dfg_edges.keys()).union(*dfg_edges.values())
-
-        if not all_nodes:
+        
+        start_node = next((node for node in dfg_edges if dfg_edges[node] or any(node in targets for targets in dfg_edges.values())), None)
+        
+        if start_node is None:
             return False
-
-        start_node = next(iter(all_nodes))
 
         def dfs(node):
             if node not in visited:
@@ -177,5 +194,7 @@ class Graph_Transformer:
                     dfs(neighbor)
 
         dfs(start_node)
+
+        all_nodes = set(dfg_edges.keys()).union(*dfg_edges.values())
 
         return visited == all_nodes
