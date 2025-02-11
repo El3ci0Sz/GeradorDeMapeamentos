@@ -47,25 +47,23 @@ class Graph_Transformer:
         dict: Novo mapeamento deslocado.
     """
     @staticmethod
-    def shift(dfg_mapping, cgra_dim, shift_x, shift_y):
+    def shift(dfg_mapping, cgra_dim, shift_y, shift_x):
         rows, cols = cgra_dim
-        shifted_mapping = {}
         occupied_positions = set()
-
-        for node, (r, c, z) in dfg_mapping.items():
-            occupied_positions.add((r, c))
-
+        new_positions = {}
+        
         for node, (r, c, z) in dfg_mapping.items():
             new_r = r + shift_y
             new_c = c + shift_x
-
+            
             if 0 <= new_r < rows and 0 <= new_c < cols and (new_r, new_c) not in occupied_positions:
-                shifted_mapping[node] = (new_r, new_c, z)
-                occupied_positions.add((new_r, new_c))
+                new_positions[node] = (new_r, new_c, z)
+                occupied_positions.add((r, c, z))
             else:
-                shifted_mapping[node] = (r, c, z)
-
-        return shifted_mapping
+                print(f"No na posição {r,c,z} não pode ser shiftado")
+                return dfg_mapping
+        
+        return new_positions
 
     """
     Rotaciona o placement pelos ângulos 90, 180 ou 270 graus.
@@ -146,7 +144,6 @@ class Graph_Transformer:
                     temp_edges = deepcopy(mapping.dfg_edges)
                     temp_edges.pop(leaf)
                     if not Graph_Transformer.is_connected(temp_edges):
-                        print("IFAUFUGHAUH\n")
                         continue
                 for src in list(mapping.dfg_edges.keys()):
                     if leaf in mapping.dfg_edges[src]:
