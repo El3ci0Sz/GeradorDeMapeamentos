@@ -72,7 +72,7 @@ class Graph_Visualizer:
         plt.close(fig)
 
     @staticmethod
-    def export_to_dot(mapping, filename="graph.dot"):
+    def export_to_dot(mapping, filename):
         """
         Exporta o grafo gerado para um arquivo DOT.
 
