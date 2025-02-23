@@ -5,29 +5,6 @@ import os
 
 class Graph_Visualizer:
     
-    # @staticmethod
-    # def export_to_dot(mapping: Mapping, filename="graph.dot"):
-    #     """
-    #     Exporta o grafo gerado para um arquivo DOT.
-
-    #     Args:
-    #         mapping (Mapping): Objeto contendo o mapeamento.
-    #         filename (str): Nome do arquivo DOT.
-    #     """
-    #     G = nx.DiGraph()
-
-    #     for node, pos in mapping.placement.items():
-    #         if len(pos) == 3 and all(isinstance(coord, (int, float)) for coord in pos):
-    #             pos_str = f"{pos[0]},{pos[1]},{pos[2]}"
-    #             G.add_node(node, position=pos_str)
-    #         else:
-    #             print(f"Aviso: Posição inválida para o nó {node}: {pos}")
-
-    #     for (src, dst), path in mapping.routing.items():
-    #         G.add_edge(src, dst, path=str(path))
-
-    #     nx.drawing.nx_agraph.write_dot(G, filename)
-    
     @staticmethod
     def generate_image_from_dot(dot_file):
         """
@@ -95,22 +72,25 @@ class Graph_Visualizer:
         plt.close(fig)
 
     @staticmethod
-    def export_to_dot(mapping: Mapping, filename="dfg_graph.dot"):
+    def export_to_dot(mapping, filename="graph.dot"):
         """
-        Exporta o DFG para um arquivo DOT, apartir de dfg_edges.
+        Exporta o grafo gerado para um arquivo DOT.
 
         Args:
-            mapping (Mapping): Objeto contendo o DFG.
+            mapping (Mapping): Objeto contendo o mapeamento.
             filename (str): Nome do arquivo DOT.
         """
         G = nx.DiGraph()
 
-        for node in mapping.dfg_edges.keys():
-            G.add_node(node)
+        for node, pos in mapping.placement.items():
+            if len(pos) == 3 and all(isinstance(coord, (int, float)) for coord in pos):
+                pos_str = f"{pos[0]},{pos[1]},{pos[2]}"
+                G.add_node(node, position=pos_str)
+            else:
+                print(f"Aviso: Posição inválida para o nó {node}: {pos}")
 
-        for src, targets in mapping.dfg_edges.items():
-            for target in targets:
-                G.add_edge(src, target)
+        for (src, dst), path in mapping.routing.items():
+            G.add_edge(src, dst, path=str(path))
 
         nx.drawing.nx_agraph.write_dot(G, filename)
         print(f"DFG exportado para {filename}")
