@@ -58,7 +58,7 @@ def balance_graph(Graph):
             prev = u
             for i in range(num_new_nodes):
                 new_node = f"aux_{node_counter}"
-                new_Graph.add_node(new_node)    
+                new_Graph.add_node(new_node, operand="Routing")    
                 new_Graph.add_edge(prev, new_node,  **attrs)
                 prev = new_node
                 node_counter += 1
