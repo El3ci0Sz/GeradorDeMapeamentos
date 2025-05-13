@@ -71,26 +71,43 @@ class Graph_Visualizer:
         print(f"Imagem salva em {output_file}")
         plt.close(fig)
 
+    # @staticmethod
+    # def export_to_dot(mapping, filename):
+    #     """
+    #     Exporta o grafo gerado para um arquivo DOT.
+
+    #     Args:
+    #         mapping (Mapping): Objeto contendo o mapeamento.
+    #         filename (str): Nome do arquivo DOT.
+    #     """
+    #     G = nx.DiGraph()
+
+    #     for node, pos in mapping.placement.items():
+    #         if len(pos) == 3 and all(isinstance(coord, (int, float)) for coord in pos):
+    #             pos_str = f"{pos[0]},{pos[1]},{pos[2]}"
+    #             G.add_node(node,opcode="add")
+    #         else:
+    #             print(f"Aviso: Posição inválida para o nó {node}: {pos}")
+
+    #     for (src, dst), path in mapping.routing.items():
+    #         G.add_edge(src, dst)
+
+    #     nx.drawing.nx_agraph.write_dot(G, filename)
+    #     print(f"DFG exportado para {filename}")
+
     @staticmethod
     def export_to_dot(mapping, filename):
-        """
-        Exporta o grafo gerado para um arquivo DOT.
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write("strict digraph {\n")
 
-        Args:
-            mapping (Mapping): Objeto contendo o mapeamento.
-            filename (str): Nome do arquivo DOT.
-        """
-        G = nx.DiGraph()
+            # 1. Escrever os nós em ordem
+            for node in sorted(mapping.placement.keys()):
+                f.write(f'    {node} [opcode=add];\n')
 
-        for node, pos in mapping.placement.items():
-            if len(pos) == 3 and all(isinstance(coord, (int, float)) for coord in pos):
-                pos_str = f"{pos[0]},{pos[1]},{pos[2]}"
-                G.add_node(node, position=pos_str)
-            else:
-                print(f"Aviso: Posição inválida para o nó {node}: {pos}")
+            for (src, dst) in sorted(mapping.routing.keys()):
+                f.write(f'    {src} -> {dst};\n')
 
-        for (src, dst), path in mapping.routing.items():
-            G.add_edge(src, dst, path=str(path))
+            f.write("}\n")
 
-        nx.drawing.nx_agraph.write_dot(G, filename)
         print(f"DFG exportado para {filename}")
+
