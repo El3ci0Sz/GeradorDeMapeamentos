@@ -1,6 +1,8 @@
 from collections import defaultdict
 from src.utils.Mapping import Mapping
 from copy import deepcopy
+from collections import defaultdict
+from src.utils.mapping_generator import Mapping_generator
 class Graph_Transformer:
     """
     Classe para manipulação de grafos no contexto de CGRA e DFG.
@@ -111,17 +113,19 @@ class Graph_Transformer:
     """
     @staticmethod
     def invert(mapping: Mapping):
-        inverted_edges = defaultdict(set)
+        inverted_edges = defaultdict(list)
+        for src, targets in mapping.dfg_edges.items():
+            for dst in targets:
+                inverted_edges[dst].append(src)
 
-        for node in mapping.dfg_vertices:
-            inverted_edges[node] = set()
+        mapping.dfg_edges = dict(inverted_edges)
+        mapping.routing = {}
+        Mapping_generator.get_routing_path(mapping)
 
-        for source, targets in mapping.dfg_edges.items():
-            for target in targets:
-                inverted_edges[target].add(source)
+        return mapping
 
-        mapping.dfg_edges = inverted_edges
-        return mapping 
+ 
+
 
     """
     Remove nós do grafo DFG.
