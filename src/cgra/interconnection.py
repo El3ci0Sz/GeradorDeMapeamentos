@@ -41,7 +41,7 @@ class Interconnection:
 
         return neighbor_dict
 
-    def get_neighbors(self, node, directions, toroidal=False, one_hope=False):
+    def get_neighbors(self, node, directions, toroidal=False):
 
         if node not in self.mapping.placement:
             return set()
@@ -55,33 +55,22 @@ class Interconnection:
         if toroidal:
             # Toroidal horizontal (coluna)
             if c == 0:
-                neighbors.add((r, cols - 1, t)) 
+                neighbors.add((r, cols - 1, next_t)) 
             elif c == cols - 1:
-                neighbors.add((r, 0, t))
+                neighbors.add((r, 0, next_t))
 
             # Toroidal vertical (linha)
             if r == 0:
-                neighbors.add((rows - 1, c, t))  
+                neighbors.add((rows - 1, c, next_t))  
             elif r == rows - 1:
-                neighbors.add((0, c, t))         
-
-        elif one_hope:
-            # Mesma linha (varia coluna)
-            for col in range(cols):
-                if col != c:
-                    neighbors.add((r, col, t))
-
-            # Mesma coluna (varia linha)
-            for row in range(rows):
-                if row != r:
-                    neighbors.add((row, c, t))
+                neighbors.add((0, c, next_t))         
 
         else:
             for x, y in directions:
                 next_row, next_col = r + x, c + y
 
                 if 0 <= next_row < rows and 0 <= next_col < cols:
-                    neighbors.add((next_row, next_col, t))
+                    neighbors.add((next_row, next_col, next_t))
 
         neighbors.add((r, c, next_t))
 
@@ -110,7 +99,14 @@ class Interconnection:
         return self.get_neighbors(node, directions)
     
     def one_hop(self, node):
-        return self.get_neighbors(node,directions=[],one_hope=True)
+
+        directions = [
+            (-2, 0),   # cima 
+            (2, 0),    # baixo 
+            (0, -2),   # esquerda 
+            (0, 2)     # direita 
+        ]
+        return self.get_neighbors(node,directions)
         
     def toroidal(self, node):
 
